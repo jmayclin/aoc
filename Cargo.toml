@@ -14,5 +14,5 @@ criterion = { version = "0.4", features = ["html_reports"] }
 cc = "1"
 
 [[bench]]
-name = "day1"
+name = "rust_asm"
 harness = false
