@@ -11,6 +11,15 @@ This will pass the arguments day1 argument to gdb
 - [ ] Why can't I directly subtract the `sp` register?
 - [ ] Is `sp` a register? 
 
+# Criterion Sadness
+My stack funiness in day 8 seems to have broken criterion? Or did I do a bad thing? I shouldn't have to increment the stack pointer, as long as no one else is calling a function on top of me, right? 
+
+On the bright, day8 seems to be the largest difference
+```
+assembly:79, rust:9469 # manually timed with Instant::now() and friends
+```
+So the assembly function is literally two orders of magnitude faster than idomatic rust. Of course the actual algorithim differs significantly and an optimized rust implementation would likely achieve much closer performance, but still fun to see.
+
 
 # My Assembly Learnings
 Rust does have inline assembly, but I don't think it includes debug information? Which given my lowly human nature, is a requirement for me.
