@@ -5,6 +5,7 @@
 // x0 <- pointer to start
 // x1 <- pointer to end of text
 day8_p1:
+    sub sp, sp, #16
     add x1, x0, x1          // x0 is pointer to start of text, x1 is length
                             // so now x1 is a pointer to the end of the text.
     mov x2, x0              // char ptr, count how many entries
@@ -138,6 +139,7 @@ graph_deref:
 
 finish:
     mov x0, x4
+    add sp, sp, #16
     ret
     // check if insp is at end, then loop back around
     // check if at ZZZ, then b finish
