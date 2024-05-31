@@ -8,46 +8,50 @@ extern "C" {
 fn index(letters: &str) -> usize {
     let bytes = letters.as_bytes();
     (bytes[0] - b'A') as usize * 26 * 26 + (bytes[1] - b'A') as usize * 26 + (bytes[2] - b'A') as usize
+    // ((bytes[0] - b'A') * 26 * 26 + (bytes[1] - b'A') * 26 + (bytes[2] - b'A')) as usize
+
 }
 
+// initial -> 113.93 us
+// remove initial loop -> 84.7 us
+// manual loop unroll -> 120 us
 pub fn rust_day8_p1_packed(input: *const u8, len: u64) -> u64 {
     let slice = unsafe {std::slice::from_raw_parts(input, len as usize)};
     let slice = unsafe {std::str::from_utf8_unchecked(slice)};
     let mut lines = slice.lines();
     let input = lines.next().unwrap().bytes().cycle();
     lines.next(); // skip over the empty line
-    let graph: BTreeMap<usize, (usize, usize)> = lines.map(|l| {
+    
+    let mut key_locations = HashMap::new();
+    let mut graph: Vec<(usize, usize)> = lines.map(|l| {
         let key   = index(&l[0..3]);
         let left  = index(&l[7..10]);
         let right = index(&l[12..15]);
         (key, (left, right))
-    }).collect();
-    let mut key_locations = HashMap::new();
-
-    let mut condensed_graph = vec![(0, 0); graph.len()];
-    for (i, (key, (left, right))) in graph.into_iter().enumerate() {
+    })
+    .enumerate()
+    .map(|(i, (key, (left, right)))| {
         key_locations.insert(key, i);
-        condensed_graph[i] = (left, right);
+        (left, right)
+    })
+    .collect();
+
+    for i in 0..graph.len() {
+        graph[i].0 = *key_locations.get(&graph[i].0).unwrap();
+        graph[i].1 = *key_locations.get(&graph[i].1).unwrap();
     }
 
-    for i in 0..condensed_graph.len() {
-        condensed_graph[i].0 = *key_locations.get(&condensed_graph[i].0).unwrap();
-        condensed_graph[i].1 = *key_locations.get(&condensed_graph[i].1).unwrap();
-    }
-
-    debug_assert_eq!(*key_locations.get(&index("AAA")).unwrap(), 0);
-    debug_assert_eq!(*key_locations.get(&index("ZZZ")).unwrap(), condensed_graph.len() - 1);
-
-    let mut current = 0;
+    let mut current = *key_locations.get(&index("AAA")).unwrap();
+    let end = *key_locations.get(&index("ZZZ")).unwrap();
     let mut count = 0;
     for step in input {
-        if current == (condensed_graph.len() - 1) {
+        if current == end {
             return count;
         }
         if step == b'L' {
-            current = condensed_graph[current].0;
+            current = graph[current].0;
         } else {
-            current = condensed_graph[current].1;
+            current = graph[current].1;
         }
         count += 1;
     }

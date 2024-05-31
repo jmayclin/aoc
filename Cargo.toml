@@ -6,6 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+crabgrind = "=0.1.9"
 libc = "0.2.155"
 prctl = "1.0.0"
 pyo3 = {version = "0.21.2", features = ["auto-initialize"]}
@@ -19,3 +20,6 @@ cc = "1"
 [[bench]]
 name = "rust_asm"
 harness = false
+
+[profile.release]
+debug = true
