@@ -6,5 +6,6 @@ fn main() {
     // lib. I guess rustc will just automatically link against it?
     cc::Build::new()
         .file("src/day1.S")
+        //.define("DEBUG_ASM", None)
     .compile("aoc");
 }
