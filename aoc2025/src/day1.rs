@@ -1,39 +1,60 @@
-use std::io::BufRead;
+use std::{arch::global_asm, io::BufRead};
 
 const DIAL_START: i64 = 50;
 
-fn d1_p1(input: &[u8]) -> i64 {
-    let str = String::from_utf8(input.to_vec()).unwrap();
-    let turns: Vec<i64> = str
-        .lines()
-        .map(|line| {
-            let direction = line.as_bytes()[0];
-            let remaining = &line[1..];
-            let mut clicks: i64 = remaining.parse().unwrap();
-            if direction == b'R' {
-                clicks *= -1;
-            }
-            clicks
-        })
-        .collect();
+global_asm!(
+    r#"
+    .global d1_p1_asm
+    d1_p1_asm:
+        add x1, x0, x1                // x1 now stores "end" memory address
+        mov x5, #10                   // CONSTANT: 10 for decimal number parsing
+        mov x6, #-1                   // CONSTANT: -1 for sign flipping
+        mov x7, #100                // CONSTANT: 100 for modulus flipping
+        mov x8, #50                   // current value of dial
+        mov x9, #0                    // accumulate total zeros
+    parse_number:
+        cmp x0, x1                    // check if we've reached the end
+        b.eq finish
 
-    let mut zeros_seen = 0;
-    let mut current = 50;
-    for click in turns {
-        current += click;
-        current = current.rem_euclid(100);
-        if current == 0 {
-            zeros_seen += 1;
-        }
-    }
+        ldrb w2, [x0], #1             // load the current byte into w2, then += 1 to counter
+        ldrb w3, [x0], #1             // first byte of the number
+        sub x3, x3, #48
+    eat_digits:
+        ldrb w4, [x0], #1
+        cmp w4, #10                   // compare to \n
+        b.eq adjust_sign
+        sub x4, x4, #48
+        mul x3, x3, x5                // multiply by 10
+        add x3, x3, x4                // add previous number
+        b eat_digits
+    adjust_sign:
+        cmp x2, #76                       // multiply by -1 if 'L'
+        b.ne tally_clicks
+        mul x3, x3, x6
+    tally_clicks:
+        add x8, x8, x3                // update click
+        sdiv x10, x8, x7
+        msub x8, x10, x7, x8
+        cmp x8, #0
+        b.ne parse_number
+        add x9, x9, #1
+        b parse_number
+    finish:
+        mov x0, x9
+        ret
+    "#,
+);
 
-    zeros_seen
+unsafe extern "C" {
+    fn d1_p1_asm(input: *const u8, length: u64) -> u64;
 }
 
-fn d1_p1_low_level(input: &[u8]) -> i64 {
+fn d1_p1(input: &[u8]) -> i64 {
     let mut i = 0_usize;
     let mut current = 50;
     let mut zeros_seen = 0;
+
+
     while i < input.len() {
         // parse sign
         let sign = if input[i] == b'L' { 1 } else { -1 };
@@ -109,19 +130,6 @@ fn d1_p2(input: &[u8]) -> u32 {
         .map(|(magnitude, direction)| magnitude as i32 * direction as i32)
         .collect();
 
-    // let turns: Vec<i64> = str
-    //     .lines()
-    //     .map(|line| {
-    //         let direction = line.as_bytes()[0];
-    //         let remaining = &line[1..];
-    //         let mut clicks: i64 = remaining.parse().unwrap();
-    //         if direction == b'R' {
-    //             clicks *= -1;
-    //         }
-    //         clicks
-    //     })
-    //     .collect();
-
     let mut zeros_seen: u32 = 0;
 
     let mut current: i32 = 50;
@@ -166,18 +174,7 @@ mod tests {
         let start = Instant::now();
         let result = d1_p1(P1_INPUT);
         let elapsed = start.elapsed();
-        println!("took {:?}", elapsed);
-        assert_eq!(result, 1097)
-    }
-
-    // 120 us -> 130us
-    // no change with rem_euclidian behavior?
-    #[test]
-    fn p1_low_level() {
-        let start = Instant::now();
-        let result = d1_p1_low_level(P1_INPUT);
-        let elapsed = start.elapsed();
-        println!("took {:?}", elapsed);
+        println!("p1 took {:?}", elapsed);
         assert_eq!(result, 1097)
     }
 
@@ -202,5 +199,23 @@ mod tests {
         assert_eq!(-10 % 100, -10);
         assert_eq!(-100 % 100, 0);
         assert_eq!(-110 % 100, -10);
+    }
+
+    /// gdb --args target/debug/deps/aoc2023-b86eedb9bba114e8 day1
+    #[test]
+    fn p1_asm_sample() {
+        let slice = P1_INPUT_SAMPLE;
+        let result = unsafe {d1_p1_asm(slice.as_ptr(), slice.len() as u64)};
+        assert_eq!(result, 3)
+    }
+
+    #[test]
+    fn p1_asm() {
+        let slice = P1_INPUT;
+        let start = Instant::now();
+        let result = unsafe {d1_p1_asm(slice.as_ptr(), slice.len() as u64)};
+        let elapsed = start.elapsed();
+        println!("p1 asm took {elapsed:?}");
+        assert_eq!(result, 1097)
     }
 }
