@@ -30,6 +30,41 @@ fn d1_p1(input: &[u8]) -> i64 {
     zeros_seen
 }
 
+fn d1_p1_low_level(input: &[u8]) -> i64 {
+    let mut i = 0_usize;
+    let mut current = 50;
+    let mut zeros_seen = 0;
+    while i < input.len() {
+        // parse sign
+        let sign = if input[i] == b'L' { 1 } else { -1 };
+        i += 1;
+        
+        let number: i32 = {
+            // parse number
+            let mut number = 0;
+            loop {
+                number += (input[i] - b'0') as i32;
+                i += 1;
+                if input[i] == b'\n' {
+                    i += 1;
+                    break;
+                }
+                number *= 10;
+            }
+            number * sign
+        };
+
+        // at exit of loop, i is pointer to next R/L
+        current += number;
+        current = current.rem_euclid(100);
+        if current == 0 {
+            zeros_seen += 1;
+        }
+
+    }
+    zeros_seen
+}
+
 fn assert_less_than_u16(input: &[u8]) {
     let str = String::from_utf8(input.to_vec()).unwrap();
     let turns: Vec<i64> = str
@@ -62,7 +97,7 @@ fn d1_p2(input: &[u8]) -> u32 {
     let mut magnitude: Vec<u16> = Vec::new();
 
     for line in str.lines() {
-        sign.push(if line.as_bytes()[0] == b'R' {1} else {-1});
+        sign.push(if line.as_bytes()[0] == b'R' { 1 } else { -1 });
         magnitude.push((&line[1..]).parse().unwrap());
     }
 
@@ -130,6 +165,17 @@ mod tests {
     fn p1() {
         let start = Instant::now();
         let result = d1_p1(P1_INPUT);
+        let elapsed = start.elapsed();
+        println!("took {:?}", elapsed);
+        assert_eq!(result, 1097)
+    }
+
+    // 120 us -> 130us
+    // no change with rem_euclidian behavior?
+    #[test]
+    fn p1_low_level() {
+        let start = Instant::now();
+        let result = d1_p1_low_level(P1_INPUT);
         let elapsed = start.elapsed();
         println!("took {:?}", elapsed);
         assert_eq!(result, 1097)
