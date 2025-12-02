@@ -1,5 +1,8 @@
 use std::{arch::global_asm, io::BufRead};
 
+pub const P1_INPUT_SAMPLE: &[u8] = include_bytes!("../resources/d1_p1_sample.txt");
+pub const P1_INPUT: &[u8] = include_bytes!("../resources/d1_p1.txt");
+
 const DIAL_START: i64 = 50;
 
 global_asm!(
@@ -46,20 +49,19 @@ global_asm!(
 );
 
 unsafe extern "C" {
-    fn d1_p1_asm(input: *const u8, length: u64) -> u64;
+    pub fn d1_p1_asm(input: *const u8, length: u64) -> u64;
 }
 
-fn d1_p1(input: &[u8]) -> i64 {
+pub fn d1_p1(input: &[u8]) -> i64 {
     let mut i = 0_usize;
     let mut current = 50;
     let mut zeros_seen = 0;
-
 
     while i < input.len() {
         // parse sign
         let sign = if input[i] == b'L' { 1 } else { -1 };
         i += 1;
-        
+
         let number: i32 = {
             // parse number
             let mut number = 0;
@@ -81,37 +83,39 @@ fn d1_p1(input: &[u8]) -> i64 {
         if current == 0 {
             zeros_seen += 1;
         }
-
     }
     zeros_seen
 }
 
-fn assert_less_than_u16(input: &[u8]) {
-    let str = String::from_utf8(input.to_vec()).unwrap();
-    let turns: Vec<i64> = str
-        .lines()
+pub fn d1_p2(input: &[u8]) -> i32 {
+    let mut current: i32 = 50;
+    input
+        .split(|b| *b == b'\n')
+        .filter(|line| !line.is_empty())
         .map(|line| {
-            let direction = line.as_bytes()[0];
-            let remaining = &line[1..];
-            let mut clicks: i64 = remaining.parse().unwrap();
-            if direction == b'R' {
-                clicks *= -1;
-            }
-            clicks
+            let number: i32 = str::from_utf8(&line[1..]).unwrap().parse().unwrap();
+            if line[0] == b'L' { number * -1 } else { number }
         })
-        .collect();
+        .map(|click| {
+            let multiple = click.abs() / 100;
+            let click = click - (multiple * 100);
 
-    for click in turns {
-        assert!((click.abs() as u16) < u16::MAX);
-    }
+            let was_zero = current == 0;
+
+            current += click;
+            let pre_modulo = current;
+            current = current.rem_euclid(100);
+
+            let is_zero = current == 0;
+
+
+            let passed_zero = current != pre_modulo && !is_zero && !was_zero;
+            multiple + passed_zero as i32 + is_zero as i32
+        })
+        .sum()
 }
 
-fn d1_p2(input: &[u8]) -> u32 {
-    // assumption: numbers all fit in u16
-    if cfg!(debug_assertions) {
-        assert_less_than_u16(input);
-    }
-
+fn old_p2(input: &[u8]) -> i32 {
     let str = String::from_utf8(input.to_vec()).unwrap();
 
     let mut sign: Vec<i8> = Vec::new();
@@ -130,10 +134,11 @@ fn d1_p2(input: &[u8]) -> u32 {
         .map(|(magnitude, direction)| magnitude as i32 * direction as i32)
         .collect();
 
-    let mut zeros_seen: u32 = 0;
+    let mut zeros_seen: i32 = 0;
 
     let mut current: i32 = 50;
     for click in clicks {
+        println!("old_p2: {current}");
         // -99 to 99
         let was_zero = current == 0;
 
@@ -150,7 +155,7 @@ fn d1_p2(input: &[u8]) -> u32 {
             zeros_seen += 1;
         }
     }
-    zeros_seen + easy_turns as u32
+    zeros_seen + easy_turns as i32
 }
 
 #[cfg(test)]
@@ -158,9 +163,6 @@ mod tests {
     use std::time::Instant;
 
     use super::*;
-
-    const P1_INPUT_SAMPLE: &[u8] = include_bytes!("../resources/d1_p1_sample.txt");
-    const P1_INPUT: &[u8] = include_bytes!("../resources/d1_p1.txt");
 
     #[test]
     fn p1_sample() {
@@ -194,6 +196,29 @@ mod tests {
         assert_eq!(result, 7101)
     }
 
+    // no change with rem_euclidian behavior?
+    #[test]
+    fn p2_old_tes() {
+        let start = Instant::now();
+        let result = old_p2(P1_INPUT);
+        let elapsed = start.elapsed();
+        println!("took {:?}", elapsed);
+        assert_eq!(result, 7101)
+    }
+
+    #[test]
+    fn p2_diff() {
+        let input = String::from_utf8(P1_INPUT.to_vec()).unwrap();
+        let line_count = input.lines().count();
+        let i = 113;
+        for i in 0..line_count {
+            let joined: Vec<&str> = input.lines().take(i).collect();
+            let joined = joined.join("\n");
+            dbg!(i);
+            assert_eq!(d1_p2(joined.as_bytes()), old_p2(joined.as_bytes()));
+        }
+    }
+
     #[test]
     fn mod_understanding() {
         assert_eq!(-10 % 100, -10);
@@ -205,7 +230,7 @@ mod tests {
     #[test]
     fn p1_asm_sample() {
         let slice = P1_INPUT_SAMPLE;
-        let result = unsafe {d1_p1_asm(slice.as_ptr(), slice.len() as u64)};
+        let result = unsafe { d1_p1_asm(slice.as_ptr(), slice.len() as u64) };
         assert_eq!(result, 3)
     }
 
@@ -213,7 +238,7 @@ mod tests {
     fn p1_asm() {
         let slice = P1_INPUT;
         let start = Instant::now();
-        let result = unsafe {d1_p1_asm(slice.as_ptr(), slice.len() as u64)};
+        let result = unsafe { d1_p1_asm(slice.as_ptr(), slice.len() as u64) };
         let elapsed = start.elapsed();
         println!("p1 asm took {elapsed:?}");
         assert_eq!(result, 1097)
