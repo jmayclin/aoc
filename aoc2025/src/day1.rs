@@ -88,60 +88,18 @@ pub fn d1_p1(input: &[u8]) -> i64 {
 }
 
 pub fn d1_p2(input: &[u8]) -> i32 {
+    let str = str::from_utf8(input).unwrap();
+    let mut zeros_seen: i32 = 0;
     let mut current: i32 = 50;
-    input
-        .split(|b| *b == b'\n')
-        .filter(|line| !line.is_empty())
-        .map(|line| {
-            let number: i32 = str::from_utf8(&line[1..]).unwrap().parse().unwrap();
-            if line[0] == b'L' { number * -1 } else { number }
-        })
-        .map(|click| {
-            let multiple = click.abs() / 100;
-            let click = click - (multiple * 100);
-
-            let was_zero = current == 0;
-
-            current += click;
-            let pre_modulo = current;
-            current = current.rem_euclid(100);
-
-            let is_zero = current == 0;
-
-
-            let passed_zero = current != pre_modulo && !is_zero && !was_zero;
-            multiple + passed_zero as i32 + is_zero as i32
-        })
-        .sum()
-}
-
-fn old_p2(input: &[u8]) -> i32 {
-    let str = String::from_utf8(input.to_vec()).unwrap();
-
-    let mut sign: Vec<i8> = Vec::new();
-    let mut magnitude: Vec<u16> = Vec::new();
 
     for line in str.lines() {
-        sign.push(if line.as_bytes()[0] == b'R' { 1 } else { -1 });
-        magnitude.push((&line[1..]).parse().unwrap());
-    }
+        let sign: i32 = if line.as_bytes()[0] == b'R' { 1 } else { -1 };
+        let magnitude: u16 = (&line[1..]).parse().unwrap();
+        let easy_turns = magnitude / 100;
+        zeros_seen += easy_turns as i32;
+        let click: i32 = (magnitude % 100) as i32 * sign;
 
-    let easy_turns: u16 = magnitude.iter().map(|turns| turns / 100).sum();
-    let clicks: Vec<i32> = magnitude
-        .into_iter()
-        .map(|m| m % 100)
-        .zip(sign.into_iter())
-        .map(|(magnitude, direction)| magnitude as i32 * direction as i32)
-        .collect();
-
-    let mut zeros_seen: i32 = 0;
-
-    let mut current: i32 = 50;
-    for click in clicks {
-        println!("old_p2: {current}");
-        // -99 to 99
         let was_zero = current == 0;
-
         current += click;
         let pre_modulo = current;
         current = current.rem_euclid(100);
@@ -155,7 +113,7 @@ fn old_p2(input: &[u8]) -> i32 {
             zeros_seen += 1;
         }
     }
-    zeros_seen + easy_turns as i32
+    zeros_seen
 }
 
 #[cfg(test)]
@@ -196,28 +154,6 @@ mod tests {
         assert_eq!(result, 7101)
     }
 
-    // no change with rem_euclidian behavior?
-    #[test]
-    fn p2_old_tes() {
-        let start = Instant::now();
-        let result = old_p2(P1_INPUT);
-        let elapsed = start.elapsed();
-        println!("took {:?}", elapsed);
-        assert_eq!(result, 7101)
-    }
-
-    #[test]
-    fn p2_diff() {
-        let input = String::from_utf8(P1_INPUT.to_vec()).unwrap();
-        let line_count = input.lines().count();
-        let i = 113;
-        for i in 0..line_count {
-            let joined: Vec<&str> = input.lines().take(i).collect();
-            let joined = joined.join("\n");
-            dbg!(i);
-            assert_eq!(d1_p2(joined.as_bytes()), old_p2(joined.as_bytes()));
-        }
-    }
 
     #[test]
     fn mod_understanding() {

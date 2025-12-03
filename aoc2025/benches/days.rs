@@ -30,3 +30,15 @@ fn d2_p1() -> u64 {
 fn d2_p2() -> u64 {
     day2::d2_p2(day2::P2_INPUT)
 }
+
+
+#[divan::bench]
+fn d3_p1() -> u64 {
+    day3::p1(day3::INPUT)
+}
+
+#[divan::bench]
+fn d3_p2() -> u64 {
+    day3::p2(day3::INPUT)
+}
+

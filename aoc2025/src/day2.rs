@@ -117,7 +117,6 @@ fn next_specific_sequence_num(value: u64, seq_len: u64) -> u64 {
     };
 
     if copy_paste > value {
-        // println!("returning copy-paste: {copy_paste}");
         return copy_paste;
     }
 
@@ -221,8 +220,6 @@ pub fn d2_p2(input: &[u8]) -> u64 {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
-
     use crate::day2::next_sequence_num;
 
     use super::*;
@@ -323,7 +320,6 @@ mod tests {
         assert_eq!(next_specific_sequence_num(20011000, 1), 22222222);
         assert_eq!(next_specific_sequence_num(20011000, 2), 20202020);
         assert_eq!(next_specific_sequence_num(20011000, 4), 20012001);
-        
     }
 
     #[test]
